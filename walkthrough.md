@@ -44,11 +44,11 @@ Understanding how to query the raw metrics is the most critical part of setting 
 jvm_memory_used_bytes{area="heap"}
 ```
 If you run this in Prometheus's **Table** view, you noticed it returns *three separate rows*:
-1. `G1 Eden Space`
-2. `G1 Old Gen`
-3. `G1 Survivor Space`
+1. **`G1 Eden Space` (The Nursery)**: Every time your application creates an object (e.g. `new String()`), it is instantly placed here. When Eden gets full, a "Minor GC" occurs, deleting any short-lived variables.
+2. **`G1 Survivor Space` (The Waiting Room)**: Objects that survive the Eden cleanup are evacuated here. They sit in the Survivor Space for a few more GC cycles as the JVM observes them.
+3. **`G1 Old Gen` (The Retirement Home)**: If an object permanently survives the Survivor Space (like our `static` list strings), it is formally promoted into Old Gen. If Old Gen fills up entirely, the application will crash with an `OutOfMemoryError`!
 
-This is highly accurate, but it makes creating a simple line-graph difficult because it draws three disconnected lines instead of your total application memory.
+While this detailed breakdown is highly accurate, it makes creating a simple line-graph difficult because it draws three disconnected metric lines instead of your total application memory.
 
 ### Query 2: The Aggregated Graph Query (The Best Choice)
 To properly watch the memory leak grow, we aggregated those separate JVM spaces together:
@@ -73,3 +73,25 @@ sum(jvm_memory_used_bytes{area="heap"}) / 1024 / 1024
 To remove the burden of figuring out the Grafana UI, we injected the setup automatically using volume mounts:
 * **`datasource.yml`**: Automatically logs Grafana into `http://prometheus:9090` without you needing to test the connection.
 * **`memory-leak.json`**: An architectural design file that created the "JVM Memory Leak Dashboard" inside Grafana immediately on boot!
+
+---
+
+## 6. Analyzing the Memory Leak (Heap Dumps)
+When Prometheus and Grafana throw an alert that your heap memory is climbing, you need to find *what* is causing the leak. This is where the **Heap Dump** comes in.
+
+### Getting the Dump
+Trigger the generation of the snapshot by visiting:
+**`http://localhost:8080/actuator/heapdump`**
+
+Spring Boot will instantly freeze the JVM, write all memory contents to a `.hprof` (or `.hprof.gz`) file, and your browser will automatically download it.
+
+### Analyzing the Dump
+1. Download an industry-standard memory analysis tool like **[Eclipse MAT (Memory Analyzer Tool)](https://eclipse.dev/mat/)**.
+2. Open MAT, and load your downloaded heap dump file into it (unzip it first if it downloaded as `.gz`).
+3. Run the **"Leak Suspects Report"**.
+4. MAT will present you with a giant Pie Chart pointing to a specific "Problem Suspect". In our case, the report will state that `java.lang.Object[]` belonging to `com.vmc.memoryleak.controller.LeakController` is hoarding 95% of the memory!
+
+### Cleaning Up
+Once you are finished analyzing the `.hprof` file, simply delete it from your computer's `Downloads` folder to save file space. 
+
+To resolve the leak inside the running application without a restart, hit our custom **`http://localhost:8080/api/clear`** endpoint. This calls `.clear()` on the static list, destroying the object references and allowing the Java Garbage Collector to immediately clean the memory! Watch your Grafana dashboard plummet back down to zero!
