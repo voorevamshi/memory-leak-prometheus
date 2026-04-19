@@ -1,0 +1,17 @@
+09:33:18.877 [main] INFO com.vmc.memoryleak.MemoryLeakPrometheusApplication -- User requests: [User [userId=u1, time=1], User [userId=u1, time=3], User [userId=u1, time=4], User [userId=u1, time=6], User [userId=u1, time=11], User [userId=u1, time=12], User [userId=u1, time=16], User [userId=u1, time=19]]
+Processing: User [userId=u1, time=1]
+Request ALLOWED for user u1 at 1, Window Logical Start: 0, Oldest Request in Window: 1
+Processing: User [userId=u1, time=3]
+Request ALLOWED for user u1 at 3, Window Logical Start: 0, Oldest Request in Window: 1
+Processing: User [userId=u1, time=4]
+Request ALLOWED for user u1 at 4, Window Logical Start: 0, Oldest Request in Window: 1
+Processing: User [userId=u1, time=6]
+Request DENIED for user u1 at 6 (Rate limited), Window Logical Start: 0, Oldest Request in Window: 1
+Processing: User [userId=u1, time=11]
+Request ALLOWED for user u1 at 11, Window Logical Start: 2, Oldest Request in Window: 3
+Processing: User [userId=u1, time=12]
+Request DENIED for user u1 at 12 (Rate limited), Window Logical Start: 3, Oldest Request in Window: 3
+Processing: User [userId=u1, time=16]
+Request ALLOWED for user u1 at 16, Window Logical Start: 7, Oldest Request in Window: 11
+Processing: User [userId=u1, time=19]
+Request ALLOWED for user u1 at 19, Window Logical Start: 10, Oldest Request in Window: 11
